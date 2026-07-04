@@ -78,7 +78,7 @@ export default withSentryConfig(nextConfig, {
   // Automatically delete source maps after uploading
   deleteSourcemapsAfterUpload: true,
 
-  // Enable Sentry in development for faster debugging
-  disableClientWebpackPlugin: process.env.NODE_ENV === "development",
-  disableServerWebpackPlugin: process.env.NODE_ENV === "development",
+  // Enable Sentry in development/local for faster debugging and low memory footprint
+  disableClientWebpackPlugin: process.env.NODE_ENV === "development" || process.env.DISABLE_SENTRY === "true" || !process.env.VERCEL,
+  disableServerWebpackPlugin: process.env.NODE_ENV === "development" || process.env.DISABLE_SENTRY === "true" || !process.env.VERCEL,
 });
