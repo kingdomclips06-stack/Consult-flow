@@ -2,8 +2,8 @@
 
 import { useTheme } from "next-themes";
 import { Moon, Sun, Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "~/components/ui/button";
+import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { useEffect, useState } from "react";
 
 export function Navbar() {

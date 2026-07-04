@@ -13,5 +13,6 @@ export * from "./skeleton";
 export * from "./table";
 export * from "./modal";
 export * from "./dropdown-menu";
+export * from "./toast";
 export * from "./empty-state";
 export * from "./animated";

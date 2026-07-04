@@ -1,5 +1,5 @@
 import { forwardRef, type ElementRef, type ComponentPropsWithoutRef } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "~/lib/utils";
 
 const Table = forwardRef<ElementRef<"table">, ComponentPropsWithoutRef<"table">>(
   ({ className, ...props }, ref) => (

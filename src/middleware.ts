@@ -3,16 +3,36 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip middleware for public routes and static files when Supabase is not configured
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+
+  // If Supabase is not configured, allow public routes through, protect dashboard/admin
+  if (!url || !anonKey) {
+    const protectedPaths = ["/dashboard", "/admin"];
+    const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
+    if (isProtected) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      return NextResponse.redirect(redirectUrl);
+    }
+    return NextResponse.next({
+      request: { headers: request.headers },
+    });
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
-  // 1. Initialize Supabase client and refresh session
+  // Initialize Supabase client and refresh session
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -40,12 +60,9 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-
   // 2. Auth protection for /dashboard and /admin routes
   if (pathname.startsWith("/dashboard")) {
     if (!user) {
-      // Redirect to sign-in if not authenticated
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/sign-in";
       redirectUrl.searchParams.set("redirect", pathname);
@@ -60,11 +77,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Fetch user role from database to verify admin access
-    // We can do an API check or verify metadata if encoded in JWT
     const userRole = user.user_metadata?.role;
     if (userRole !== "admin") {
-      // Forbidden: redirect to dashboard
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/dashboard";
       return NextResponse.redirect(redirectUrl);
@@ -73,8 +87,6 @@ export async function middleware(request: NextRequest) {
 
   // 3. Multi-tenant Subdomain Resolution
   const hostname = request.headers.get("host") || "";
-
-  // Define root/app domains to identify if it's a tenant subdomain request
   const rootDomains = ["localhost:3000", "consultflow.ai", "ctonew.app"];
   let matchedRootDomain = "";
 
@@ -85,20 +97,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If we are on the main domain or cannot match root domain, proceed normally
   if (!matchedRootDomain || hostname === matchedRootDomain) {
     return response;
   }
 
-  // Extract subdomain (e.g. "barber" from "barber.consultflow.ai")
   const subdomain = hostname.replace(`.${matchedRootDomain}`, "");
 
-  // If subdomain is 'www' or empty, it's the root site
   if (subdomain === "www" || !subdomain) {
     return response;
   }
 
-  // Skip rewriting for static files, next internals, and API routes
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -108,14 +116,11 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Rewrite /xyz to /org/[slug]/xyz
-  const url = request.nextUrl.clone();
-  url.pathname = `/org/${subdomain}${pathname}`;
-  
-  // Return rewritten response while preserving cookies
-  const rewrittenResponse = NextResponse.rewrite(url);
-  
-  // Copy all cookies from the modified response to the rewritten response
+  const targetUrl = request.nextUrl.clone();
+  targetUrl.pathname = `/org/${subdomain}${pathname}`;
+
+  const rewrittenResponse = NextResponse.rewrite(targetUrl);
+
   response.cookies.getAll().forEach((cookie) => {
     rewrittenResponse.cookies.set(cookie.name, cookie.value, {
       path: cookie.path,
@@ -131,16 +136,8 @@ export async function middleware(request: NextRequest) {
   return rewrittenResponse;
 }
 
-// Config to specify matching routes
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
