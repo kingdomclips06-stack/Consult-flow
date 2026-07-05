@@ -16,6 +16,7 @@ import {
   Code2,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -32,14 +33,14 @@ const navItems = [
   { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
-  return (
+  const sidebarContent = (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex h-dvh flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 transition-all duration-300",
+        "flex h-full flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 transition-all duration-300",
         collapsed ? "w-16" : "w-60"
       )}
     >
@@ -52,7 +53,6 @@ export function Sidebar() {
           <span className="text-sm font-semibold text-gray-900 dark:text-white">ConsultFlow</span>
         )}
       </div>
-
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-1">
         {navItems.map((item) => {
@@ -61,6 +61,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                 isActive
@@ -76,7 +77,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
       {/* Collapse toggle */}
       <div className="border-t border-gray-200 dark:border-gray-800 p-2">
         <button
@@ -88,5 +88,41 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={onClose}
+        >
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 p-2 text-white/80 hover:text-white"
+            aria-label="Close sidebar"
+          >
+            <X className="size-6" />
+          </button>
+        </div>
+      )}
+
+      {/* Mobile sidebar (overlay) */}
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-300 md:hidden",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {sidebarContent}
+      </div>
+
+      {/* Desktop sidebar (always visible) */}
+      <div className="hidden md:block">
+        {sidebarContent}
+      </div>
+    </>
   );
 }

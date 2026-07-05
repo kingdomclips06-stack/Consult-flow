@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "~/lib/supabase/server";
-import { getUserOrganizationId, getServices, createService, updateService, deleteService, getEmployees, createEmployee, updateEmployee, deleteEmployee, getFAQs, createFAQ, updateFAQ, deleteFAQ } from "~/lib/db/queries";
+import { getUserOrganizationId, getServices, createService, updateService, deleteService, getEmployees, createEmployee, updateEmployee, deleteEmployee, getFAQs, createFAQ, updateFAQ, deleteFAQ, getConsultations, getConsultationsCount, getConsultationsTodayCount, getBookedConsultationsCount } from "~/lib/db/queries";
 import { revalidatePath } from "next/cache";
 
 async function getAuthOrg() {
@@ -181,4 +181,29 @@ export async function deleteFAQAction(id: string) {
   const result = await deleteFAQ(id, orgId);
   revalidatePath("/dashboard/faqs");
   return result;
+}
+
+// Consultations Actions
+export async function getConsultationsAction() {
+  const orgId = await getAuthOrg();
+  return getConsultations(orgId);
+}
+
+export async function getDashboardStatsAction() {
+  const orgId = await getAuthOrg();
+  const [consultationsCount, todayCount, bookedCount, servicesList, employeesList] = await Promise.all([
+    getConsultationsCount(orgId),
+    getConsultationsTodayCount(orgId),
+    getBookedConsultationsCount(orgId),
+    getServices(orgId),
+    getEmployees(orgId),
+  ]);
+  return {
+    consultationsCount,
+    todayCount,
+    bookedCount,
+    servicesCount: servicesList.length,
+    services: servicesList,
+    employeesCount: employeesList.length,
+  };
 }

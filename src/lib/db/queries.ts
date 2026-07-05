@@ -1,6 +1,6 @@
 import { db } from "./index";
-import { services, employees, faqs, users } from "./schema";
-import { eq, and, asc } from "drizzle-orm";
+import { services, employees, faqs, users, consultations } from "./schema";
+import { eq, and, asc, sql } from "drizzle-orm";
 
 export async function getUserOrganizationId(userId: string): Promise<string | null> {
   const result = await db
@@ -102,4 +102,50 @@ export async function deleteFAQ(id: string, organizationId: string) {
     .where(and(eq(faqs.id, id), eq(faqs.organizationId, organizationId)))
     .returning();
   return deletedFAQ;
+}
+
+// Consultations
+export async function getConsultations(organizationId: string) {
+  return db
+    .select()
+    .from(consultations)
+    .where(eq(consultations.organizationId, organizationId))
+    .orderBy(asc(consultations.createdAt))
+    .limit(10);
+}
+
+export async function getConsultationsCount(organizationId: string) {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(consultations)
+    .where(eq(consultations.organizationId, organizationId));
+  return Number(result[0]?.count || 0);
+}
+
+export async function getConsultationsTodayCount(organizationId: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(consultations)
+    .where(
+      and(
+        eq(consultations.organizationId, organizationId),
+        sql`${consultations.createdAt} >= ${today.toISOString()}`
+      )
+    );
+  return Number(result[0]?.count || 0);
+}
+
+export async function getBookedConsultationsCount(organizationId: string) {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(consultations)
+    .where(
+      and(
+        eq(consultations.organizationId, organizationId),
+        eq(consultations.bookedAppointment, true)
+      )
+    );
+  return Number(result[0]?.count || 0);
 }
