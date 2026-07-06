@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "~/lib/supabase/server";
-import { getUserOrganizationId, getServices, createService, updateService, deleteService, getEmployees, createEmployee, updateEmployee, deleteEmployee, getFAQs, createFAQ, updateFAQ, deleteFAQ, getConsultations, getConsultationsCount, getConsultationsTodayCount, getBookedConsultationsCount } from "~/lib/db/queries";
+import { getUserOrganizationId, getServices, createService, updateService, deleteService, getEmployees, createEmployee, updateEmployee, deleteEmployee, getFAQs, createFAQ, updateFAQ, deleteFAQ, getConsultations, getConsultationsCount, getConsultationsTodayCount, getBookedConsultationsCount, getOrganization, updateOrganization, getBranding, upsertBranding, updateBranding } from "~/lib/db/queries";
 import { revalidatePath } from "next/cache";
 
 async function getAuthOrg() {
@@ -206,4 +206,74 @@ export async function getDashboardStatsAction() {
     services: servicesList,
     employeesCount: employeesList.length,
   };
+}
+
+// Branding Actions
+export async function getBrandingAction() {
+  const orgId = await getAuthOrg();
+  return getBranding(orgId);
+}
+
+export async function saveBrandingAction(data: {
+  logoUrl?: string;
+  primaryColor: string;
+  secondaryColor: string;
+  fontFamily: string;
+  widgetPosition: "bottom-right" | "bottom-left" | "custom";
+  widgetTitle: string;
+  widgetSubtitle: string;
+  aiName: string;
+  aiPersonality?: string;
+  aiInstructions?: string;
+}) {
+  const orgId = await getAuthOrg();
+  const result = await upsertBranding(orgId, {
+    logoUrl: data.logoUrl || null,
+    primaryColor: data.primaryColor,
+    secondaryColor: data.secondaryColor,
+    fontFamily: data.fontFamily,
+    widgetPosition: data.widgetPosition,
+    widgetTitle: data.widgetTitle,
+    widgetSubtitle: data.widgetSubtitle,
+    aiName: data.aiName,
+    aiPersonality: data.aiPersonality || null,
+    aiInstructions: data.aiInstructions || null,
+  });
+  revalidatePath("/dashboard/branding");
+  revalidatePath("/dashboard/settings");
+  return result;
+}
+
+// Profile Actions
+export async function getProfileAction() {
+  const orgId = await getAuthOrg();
+  return getOrganization(orgId);
+}
+
+export async function updateProfileAction(data: {
+  name: string;
+}) {
+  const orgId = await getAuthOrg();
+  const result = await updateOrganization(orgId, {
+    name: data.name,
+  });
+  revalidatePath("/dashboard/settings");
+  return result;
+}
+
+// Booking Link Actions
+export async function getBookingLinkAction() {
+  const orgId = await getAuthOrg();
+  const org = await getOrganization(orgId);
+  return org?.bookingLink || null;
+}
+
+export async function updateBookingLinkAction(bookingLink: string) {
+  const orgId = await getAuthOrg();
+  const result = await updateOrganization(orgId, {
+    bookingLink: bookingLink || null,
+  });
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/integrations");
+  return result;
 }

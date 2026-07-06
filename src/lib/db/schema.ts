@@ -60,6 +60,7 @@ export const organizations = pgTable("organizations", {
   subscriptionStatus: subscriptionStatusEnum("subscription_status")
     .default("incomplete")
     .notNull(),
+  bookingLink: text("booking_link"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

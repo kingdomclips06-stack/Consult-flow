@@ -1,0 +1,1 @@
+ALTER TABLE "organizations" ADD COLUMN "booking_link" text;

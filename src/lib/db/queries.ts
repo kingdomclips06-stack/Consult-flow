@@ -1,5 +1,5 @@
 import { db } from "./index";
-import { services, employees, faqs, users, consultations } from "./schema";
+import { services, employees, faqs, users, consultations, organizations, organizationBranding } from "./schema";
 import { eq, and, asc, sql } from "drizzle-orm";
 
 export async function getUserOrganizationId(userId: string): Promise<string | null> {
@@ -148,4 +148,69 @@ export async function getBookedConsultationsCount(organizationId: string) {
       )
     );
   return Number(result[0]?.count || 0);
+}
+
+// Organization & Branding Queries
+export async function getOrganization(id: string) {
+  const result = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, id))
+    .limit(1);
+  return result[0] || null;
+}
+
+export async function updateOrganization(id: string, data: Partial<typeof organizations.$inferInsert>) {
+  const [updated] = await db
+    .update(organizations)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(organizations.id, id))
+    .returning();
+  return updated;
+}
+
+export async function getBranding(organizationId: string) {
+  const result = await db
+    .select()
+    .from(organizationBranding)
+    .where(eq(organizationBranding.organizationId, organizationId))
+    .limit(1);
+  return result[0] || null;
+}
+
+export async function upsertBranding(organizationId: string, data: Partial<typeof organizationBranding.$inferInsert>) {
+  const existing = await db
+    .select()
+    .from(organizationBranding)
+    .where(eq(organizationBranding.organizationId, organizationId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    const [updated] = await db
+      .update(organizationBranding)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(organizationBranding.organizationId, organizationId))
+      .returning();
+    return updated;
+  } else {
+    const [inserted] = await db
+      .insert(organizationBranding)
+      .values({
+        ...data,
+        organizationId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any)
+      .returning();
+    return inserted;
+  }
+}
+
+export async function updateBranding(organizationId: string, data: Partial<typeof organizationBranding.$inferInsert>) {
+  const [updated] = await db
+    .update(organizationBranding)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(organizationBranding.organizationId, organizationId))
+    .returning();
+  return updated;
 }
