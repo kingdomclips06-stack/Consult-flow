@@ -277,3 +277,12 @@ export async function updateBookingLinkAction(bookingLink: string) {
   revalidatePath("/dashboard/integrations");
   return result;
 }
+
+export async function saveBookingLinkAction(bookingLink: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+  const orgId = await getUserOrganizationId(user.id);
+  if (!orgId) throw new Error("No organization");
+  return updateOrganization(orgId, { bookingLink });
+}
